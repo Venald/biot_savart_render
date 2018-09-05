@@ -1,0 +1,57 @@
+#version 450 core
+
+// Constants from application
+uniform float I;
+uniform float Radius;
+uniform float mu0;
+uniform float pi;
+uniform float zloc; 
+
+// Attiribute data
+struct AttribPosition {
+	vec4 vector4;
+};
+// Input/Output buffer
+layout(std140, binding = 0) buffer destPosition {
+	AttribPosition position[];
+} outPosition;
+layout(std140, binding = 1) buffer destColor {
+	AttribPosition color[];
+} outColor;
+
+
+
+// Declare groupsize 1x1x1 = 1
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+// Main program
+void main() {
+	// Current position
+	ivec2 currPos = ivec2(gl_GlobalInvocationID.xy);
+	// Calculate number of threads
+	uint gWidth = gl_WorkGroupSize.x * gl_NumWorkGroups.x;
+	uint gHeight = gl_WorkGroupSize.y * gl_NumWorkGroups.y;
+	uint gSize = gWidth * gHeight;
+	// 1D array so offset
+	uint offset = currPos.y * gWidth + currPos.x;
+	// Calculate the value of the line integral in current pos
+	vec3 B = vec3(0,0,0);
+	int partitions = 1000;
+	for (int i = 1; i < partitions-1; i++) {
+		float angle = 2 * pi / partitions * i;
+		float di = 2 * pi / partitions;
+		float rx = outPosition.position[offset].vector4.x - (0.25 * cos(2.0*angle));
+		float ry = outPosition.position[offset].vector4.y - (0.13 * sin(3.0*angle));
+		float rz = zloc;
+		vec3 r_vec = vec3(rx,ry,rz);
+		float dx = 0.25 * (cos(2.0*angle + 2.0*di) - cos(2.0*angle));
+		float dy = 0.13 * (sin(3.0*angle + 3.0*di) - sin(3.0*angle));
+		vec3 d_vec = vec3(dx,dy,0);
+		float norm = length(r_vec);
+		vec3 integral = cross(d_vec,r_vec) / (norm*norm*norm);
+		B += mu0 / (4 * pi)*I*integral;
+
+	}
+	outColor.color[offset].vector4 = vec4(abs(B.x),abs(B.y),abs(B.z),1);
+
+}
