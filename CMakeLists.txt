@@ -14,7 +14,7 @@ find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
 find_package(OpenGL)
 include_directories(${PROJECT_SOURCE_DIR}/SFML/include)
 # Add source to this project's executable.
-add_executable (cmaketest "src/cmake_test.cpp" "src/cmake_test.h")
+add_executable (cmaketest "src/biot_savart_law.cpp" "src/biot_savart_law.h")
 
 target_link_libraries(cmaketest ${SFML_LIBS}/sfml-main.lib)
 target_link_libraries(cmaketest ${SFML_LIBS}/sfml-system-d.lib)
@@ -22,4 +22,3 @@ target_link_libraries(cmaketest ${SFML_LIBS}/sfml-window-d.lib)
 target_link_libraries(cmaketest ${SFML_LIBS}/sfml-graphics-d.lib)
 target_link_libraries(cmaketest opengl32.lib)
 target_link_libraries(cmaketest ${libs}/glew32.lib)
-# TODO: Add tests and install targets if needed.

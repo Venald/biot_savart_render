@@ -1,8 +1,10 @@
 ﻿// biot_svart_shader.cpp : Defines the entry point for the console application.
 //
 
-#include "cmake_test.h"
+#include "biot_savart_law.h"
 #include "Shaderloader.h"
+
+// Buffer Struct for the data for GPU
 struct BufferData {
 	glm::vec4 vector4;
 };
@@ -12,8 +14,8 @@ float scale_to(float x, float min, float max, float a, float b) {
 }
 
 GLuint compile_compute_shader(void) {
-	std::ofstream debugfile;
-	debugfile.open("debug_file.txt");
+	std::ofstream debug_file;
+	debug_file.open("debug_file.txt");
 	GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
 	GLuint program;
 
@@ -39,15 +41,15 @@ GLuint compile_compute_shader(void) {
 		glGetShaderInfoLog(compute_shader, maxLength, &maxLength, &errorLog[0]);
 
 		// Provide the infolog in whatever manor you deem best.
-		debugfile << "Error in compute shader" << std::endl;
+		debug_file << "Error in compute shader" << std::endl;
 		for (size_t i = 0; i < errorLog.size(); i++)
 		{
-			debugfile << errorLog[i];
+			debug_file << errorLog[i];
 		}
-		debugfile << std::endl;
+		debug_file << std::endl;
 		// Exit with failure.
 		glDeleteShader(compute_shader); // Don't leak the shader.
-		debugfile.close();
+		debug_file.close();
 		return NULL;
 	}
 	program = glCreateProgram();
@@ -55,16 +57,19 @@ GLuint compile_compute_shader(void) {
 	//Attach shaders
 	glAttachShader(program, compute_shader);
 
+	// Link the program
 	glLinkProgram(program);
 
+	// Delete the shader so it doesn't leak
 	glDeleteShader(compute_shader);
-	debugfile.close();
+	debug_file.close();
 	return program;
 }
 
+// Compile the shaders for drawing the result
 GLuint compile_drawing_shaders(void) {
-	std::ofstream debugfile;
-	debugfile.open("debug_file.txt");
+	std::ofstream debug_file;
+	debug_file.open("debug_file.txt");
 	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
 	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint program;
@@ -81,34 +86,35 @@ GLuint compile_drawing_shaders(void) {
 	glShaderSource(frag_shader, 1, &frag_shader_src, NULL);
 	glShaderSource(vert_shader, 1, &vert_shader_srt, NULL);
 
-	// Compile
+	// Compile fragment and vertex shaders
 	glCompileShader(frag_shader);
-	GLint isCompiled = 0;
-	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &isCompiled);
-	if (isCompiled == GL_FALSE) {
-		GLint maxLength = 0;
-		glGetShaderiv(frag_shader, GL_INFO_LOG_LENGTH, &maxLength);
+	GLint is_compiled = 0;
+	glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &is_compiled);
+	if (is_compiled == GL_FALSE) {
+		GLint max_length = 0;
+		glGetShaderiv(frag_shader, GL_INFO_LOG_LENGTH, &max_length);
 
 		// The maxLength includes the NULL character
-		std::vector<GLchar> errorLog(maxLength);
-		glGetShaderInfoLog(frag_shader, maxLength, &maxLength, &errorLog[0]);
+		std::vector<GLchar> errorLog(max_length);
+		glGetShaderInfoLog(frag_shader, max_length, &max_length, &errorLog[0]);
 
 		// Provide the infolog in whatever manor you deem best.
-		debugfile << "Error in fragment shader" << std::endl;
+		debug_file << "Error in fragment shader" << std::endl;
 		for (size_t i = 0; i < errorLog.size(); i++)
 		{
-			debugfile << errorLog[i];
+			debug_file << errorLog[i];
 		}
-		debugfile << std::endl;
+		debug_file << std::endl;
 		// Exit with failure.
 		glDeleteShader(frag_shader); // Don't leak the shader.
-		debugfile.close();
+		debug_file.close();
 		return NULL;
 	}
+
 	glCompileShader(vert_shader);
-	isCompiled = 0;
-	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &isCompiled);
-	if (isCompiled == GL_FALSE) {
+	is_compiled = 0;
+	glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &is_compiled);
+	if (is_compiled == GL_FALSE) {
 		GLint maxLength = 0;
 		glGetShaderiv(vert_shader, GL_INFO_LOG_LENGTH, &maxLength);
 
@@ -117,15 +123,15 @@ GLuint compile_drawing_shaders(void) {
 		glGetShaderInfoLog(vert_shader, maxLength, &maxLength, &errorLog[0]);
 
 		// Provide the infolog in whatever manor you deem best.
-		debugfile << "Error in vertex shader" << std::endl;
+		debug_file << "Error in vertex shader" << std::endl;
 		for (size_t i = 0; i < errorLog.size(); i++)
 		{
-			debugfile << errorLog[i];
+			debug_file << errorLog[i];
 		}
-		debugfile << std::endl;
+		debug_file << std::endl;
 		// Exit with failure.
 		glDeleteShader(vert_shader); // Don't leak the shader.
-		debugfile.close();
+		debug_file.close();
 		return NULL;
 	}
 	program = glCreateProgram();
@@ -134,11 +140,14 @@ GLuint compile_drawing_shaders(void) {
 	glAttachShader(program, frag_shader);
 	glAttachShader(program, vert_shader);
 
+	// Link the program
 	glLinkProgram(program);
 
+	// Delete the shaders so they don't leak
 	glDeleteShader(frag_shader);
 	glDeleteShader(vert_shader);
-	debugfile.close();
+
+	debug_file.close();
 	return program;
 }
 
@@ -169,15 +178,18 @@ int main()
 	std::vector<BufferData> bufferColor(NUM_DOTS);
 	std::ofstream outfile;
 
-	bool saved = true;
-	if (saved == false) {
+	bool fileSave = false;
+	if (fileSave == true) {
 		outfile.open("outputdata.dat");
 	}
+	// Create the buffers and vao
 	GLuint buffers[2];
 	GLuint vao;
 	sf::Clock clock;
 	while (!exit) {
 		sf::Vector2u wsize = window.getSize();
+		
+		// Set the initial data for the array
 		for (size_t i = 0; i < NUM_DOTS_H; i++)
 		{
 			for (size_t j = 0; j < NUM_DOTS_V; j++)
@@ -233,13 +245,7 @@ int main()
 				// Adjust the viewport when the window is resized
 				if (event.type == sf::Event::Resized)
 				{
-					// Make the window the active window for OpenGL calls
-					// window.setActive(true);
-
-					//glViewport(0, 0, event.size.width, event.size.height);
-
-					// Make the window no longer the active window for OpenGL calls
-					// window.setActive(false);
+					glViewport(0, 0, event.size.width, event.size.height);
 				}
 			}
 
@@ -292,8 +298,9 @@ int main()
 			float b_z_max = float_min;
 			float b_z_min = float_max;
 
+			// Find the min,max for each component for color scaling in the rendering of final image
 			for (size_t i = 0; i < NUM_DOTS * 4; i += 4) {
-				if (saved == false) {
+				if (fileSave == true) {
 					outfile << ptr_to_data[i] << " " << ptr_to_data[i + 1] << " " << ptr_to_data[i + 2] << std::endl;
 				}
 				if (b_x_max < ptr_to_data[i]) {
@@ -323,6 +330,7 @@ int main()
 
 			// Run the shader program and draw the points
 			glUseProgram(shader_program);
+			// Get the shader's paramters and assign values
 			GLint iloc_x = glGetUniformLocation(shader_program, "b_x_min_max");
 			GLint iloc_y = glGetUniformLocation(shader_program, "b_y_min_max");
 			GLint iloc_z = glGetUniformLocation(shader_program, "b_z_min_max");
@@ -343,23 +351,13 @@ int main()
 			glClear(GL_COLOR_BUFFER_BIT);
 			glClear(GL_DEPTH_BUFFER_BIT);
 
-			float x = sf::Mouse::getPosition(window).x * 200.f / window.getSize().x - 100.f;
-			float y = -sf::Mouse::getPosition(window).y * 200.f / window.getSize().y + 100.f;
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
-			glTranslatef(x, y, -100.f);
-
-			glRotatef(clock.getElapsedTime().asSeconds() * 50.f, 1.f, 0.f, 0.f);
-			glRotatef(clock.getElapsedTime().asSeconds() * 30.f, 0.f, 1.f, 0.f);
-			glRotatef(clock.getElapsedTime().asSeconds() * 90.f, 0.f, 0.f, 1.f);
-
 			glDrawArrays(GL_POINTS, 0, NUM_DOTS);
 			float frame_time = (-frame_time_start.asSeconds() + frame_clock.getElapsedTime().asSeconds());
 			std::cout << "Frame time = " << frame_time << std::endl;
 			window.display();
 			//clock.restart();
-			if (saved == false) {
-				saved = true;
+			if (fileSave == true) {
+				fileSave = false;
 			}
 		}
 		outfile.close();

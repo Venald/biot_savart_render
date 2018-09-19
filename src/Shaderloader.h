@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+
+// Read the shader to a string for the main program to use as shader source
 std::string readShader(const char *filepath) {
 	std::string content;
 	std::ifstream fileStream(filepath, std::ios::in);

@@ -9,7 +9,7 @@ out VS_OUT{
 	vec4 color;
 } vs_out;
 
-
+// Transfer the data to fragment shader
 void main(){
 	gl_Position = position;
 	vs_out.color  = color;
