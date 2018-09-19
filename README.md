@@ -6,4 +6,5 @@ Render intensity of a magnetic field for a parametric curve using openGL
  <li>*SFML 2.5+</li>
  <li>*GLM</li>
 </ul>
-![Result](https://github.com/Venald/biot_savart_render/blob/master/result.png)
+
+![Result](result.png)
